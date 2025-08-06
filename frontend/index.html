@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat App</title>
+  <style>
+    body {
+      font-family: Arial;
+      margin: 20px;
+    }
+    #chat {
+      border: 1px solid #ccc;
+      padding: 10px;
+      height: 300px;
+      overflow-y: scroll;
+      margin-bottom: 10px;
+    }
+    input, button {
+      padding: 6px;
+      margin: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>WebSocket Chat App</h2>
+    <div id="registration">
+  <label>Your User ID:</label>
+  <input type="text" id="userIdInput">
+  <button onclick="register()">Register</button>
+    </div>
+  <div id="chat"></div>
+
+  <label>Send to:</label>
+  <input type="text" id="toInput">
+  <input type="text" id="messageInput" placeholder="Type a message...">
+  <button onclick="sendMessage()">Send</button>
+
+  <script>
+    let socket;
+    let userId;
+
+    function register() {
+      userId = document.getElementById('userIdInput').value;
+      socket = new WebSocket('ws://localhost:8080');
+
+      socket.onopen = () => {
+        const registerMessage = {
+          type: 'register',
+          userId: userId
+        };
+        socket.send(JSON.stringify(registerMessage));
+        logRegister(`Registered as ${userId}`);
+      };
+
+      socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        logMessage(`${data.from}: ${data.message}`);
+      };
+
+      socket.onclose = () => {
+        logMessage('Disconnected from server');
+      };
+
+      socket.onerror = (err) => {
+        console.error('WebSocket error:', err);
+        logMessage('Error occurred');
+      };
+    }
+
+    function sendMessage() {
+      const to = document.getElementById('toInput').value;
+      const msg = document.getElementById('messageInput').value;
+
+      if (!to || !msg || !userId) {
+        alert("Please fill all fields and register first");
+        return;
+      }
+
+      const messageObj = {
+        type: 'message',
+        to: to,
+        message: msg
+      };
+
+      socket.send(JSON.stringify(messageObj));
+      logMessage(`You to ${to}: ${msg}`);
+      document.getElementById('messageInput').value = '';
+    }
+
+    function logMessage(msg) {
+      const chatBox = document.getElementById('chat');
+      chatBox.innerHTML += `<div>${msg}</div>`;
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+    function logRegister(msg) {
+      const chatBox = document.getElementById('chat');
+      chatBox.innerHTML += `<header>${msg}</header>`;
+      chatBox.scrollTop = chatBox.scrollHeight;
+      document.getElementById('registration').style.display = 'none';
+    }
+  </script>
+
+</body>
+</html>
