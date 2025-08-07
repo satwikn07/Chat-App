@@ -6,8 +6,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes');
-// const chatRoutes = require('./routes/chatRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 // const messageRoutes = require('./routes/messageRoutes');
 // const { setupSocket } = require('./sockets/socketHandler');
 // const { initRedis } = require('./utils/redis');
@@ -22,8 +21,8 @@ app.use(express.json());
 // setupSocket(io);
 
 app.use('/api/auth', authRoutes);
-app.use('/api/user', userRoutes);
-// app.use('/api/chat', chatRoutes);
+// app.use('/api/user', userRoutes);
+app.use('/api', chatRoutes);
 // app.use('/api/message', messageRoutes);
 (async () => {
   await connectDB(); // connect + sync

@@ -20,7 +20,8 @@ const Message = sequelize.define('Message', {
     allowNull: false
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  tableName: 'Messages' // Explicitly set the table name
 });
 
 module.exports = Message;

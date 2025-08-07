@@ -17,5 +17,6 @@ Chat.belongsToMany(User, { through: ChatUser, foreignKey: 'chatId' });
 
 // One-to-One : Chat has one latestMessage
 Chat.belongsTo(Message, { as: 'latestMessage', foreignKey: 'latestMessageId' });
+Message.hasOne(Chat, { as: 'latestInChat', foreignKey: 'latestMessageId' });
 
 module.exports = {User, Chat, Message, ChatUser};
