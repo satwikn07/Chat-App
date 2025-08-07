@@ -20,7 +20,8 @@ const Chat = sequelize.define('Chat', {
     allowNull: true
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  tableName: 'Chats' // Explicitly set the table name
 });
 
 // const Message = require('./Message'); // adjust path as needed

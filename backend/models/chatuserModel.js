@@ -3,21 +3,19 @@ const { sequelize } = require('../utils/db');
 
 
 const ChatUser = sequelize.define('ChatUsers', {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true
-  },
   userId: {
     type: DataTypes.INTEGER,
+    primaryKey: true,
     allowNull: false
   },
   chatId: {
     type: DataTypes.INTEGER,
+    primaryKey: true,
     allowNull: false
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  tableName: 'ChatUsers' // Explicitly set the table name
 });
 
 module.exports = ChatUser;
