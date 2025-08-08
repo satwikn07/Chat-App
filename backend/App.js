@@ -22,7 +22,7 @@ app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 // app.use('/api/user', userRoutes);
-app.use('/api', chatRoutes);
+app.use('/api/chat', chatRoutes);
 // app.use('/api/message', messageRoutes);
 (async () => {
   await connectDB(); // connect + sync

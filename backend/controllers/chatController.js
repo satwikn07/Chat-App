@@ -1,4 +1,4 @@
-const {Chat, ChatUser, User} = require('../models/associations');
+const {Chat, ChatUser, User, Message} = require('../models/associations');
 const { Sequelize } = require('sequelize');
 const { sequelize } = require('../utils/db'); 
 const {Op}  = require('sequelize'); // to use in filtering
@@ -76,6 +76,112 @@ const createChat = async (req, res) => { // to handle POST /Chat
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
-module.exports = {
-  createChat
+
+// 2. GET /chat/:chatId
+const getChatDetails = async (req, res) => {
+  const { chatId } = req.params;
+
+  try {
+    const chat = await Chat.findByPk(chatId, {
+      include: [ //eager loading related models
+        {
+          model: User,
+          attributes: ['id', 'name', 'email'],
+          through: { attributes: [] } // hide ChatUser join table
+        },
+        {
+          model: Message,
+          as: 'latestMessage',
+          attributes: ['id', 'content', 'senderId', 'createdAt'],
+        }
+      ]
+    });
+
+    if (!chat) return res.status(404).json({ message: 'Chat not found' });
+
+    // Check if user is part of chat
+    const isParticipant = chat.Users.some(user => user.id === req.user.id);
+    if (!isParticipant)
+      return res.status(403).json({ message: 'You are not a participant in this chat' });
+
+    res.json({
+      id: chat.id,
+      name: chat.name,
+      isGroupChat: chat.isGroupChat,
+      participants: chat.Users,
+      createdBy: chat.creator,
+      latestMessage: chat.latestMessage,
+      createdAt: chat.createdAt,
+      updatedAt: chat.updatedAt
+    });
+  } catch (err) {
+    console.error('Error in getChatDetails:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
+
+
+// 3. GET /user/chats
+const getUserChats = async (req, res) => {
+  try {
+    // 1) Get chatIds from pivot table where this user is present
+    const chatUserRows = await ChatUser.findAll({
+      where: { userId: req.user.id },
+      attributes: ['chatId']
+    });
+
+    const chatIds = chatUserRows.map(r => r.chatId);
+
+    // If user is not in any chat, return empty array early
+    if (!chatIds.length) return res.json([]);
+
+    // 2) Fetch chats by those IDs and include full participant lists + latest message
+    const chats = await Chat.findAll({
+      where: { id: chatIds },
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'name', 'email'],
+          through: { attributes: [] } // hide ChatUser metadata
+        },
+        {
+          model: Message,
+          as: 'latestMessage',
+          attributes: ['id', 'content', 'createdAt', 'senderId']
+        }
+      ],
+      order: [['updatedAt', 'DESC']]
+    });
+
+    // 3) Format response
+    const formatted = chats.map(chat => ({
+      id: chat.id,
+      name: chat.name,
+      isGroupChat: chat.isGroupChat,
+      participants: chat.Users,          // full list of participants
+      createdBy: chat.createdBy || null, // raw column (no creator association)
+      latestMessage: chat.latestMessage || null,
+      updatedAt: chat.updatedAt
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    console.error('Error in getUserChats:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = {
+  createChat,
+  getChatDetails,
+  getUserChats
+};
+
+
+// Summary of Sequelize Features Used:
+// Feature	Usage
+// belongsToMany	Fetching all participants via chat.Users
+// belongsTo (as: 'creator')	Fetching who created the chat
+// belongsTo (as: 'latestMessage')	Fetching the last message efficiently
+// through: { attributes: [] }	Hides intermediate ChatUser join table info
+// where: { id: req.user.id } inside include	Filters chats where user is a participant
