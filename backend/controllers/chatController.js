@@ -171,10 +171,60 @@ const getUserChats = async (req, res) => {
   }
 };
 
+const renameGroupChat = async (req, res) => {
+  const { chatId } = req.params;
+  const { name } = req.body;
+  console.log('Renaming group chat:', chatId, 'to name:', name);
+  if (!name || typeof name !== 'string') {
+    return res.status(400).json({ error: 'Name must be a non-empty string' });
+  }
+
+  try {
+    const chat = await Chat.findByPk(chatId);
+    if (!chat) return res.status(404).json({ message: 'Chat not found' });
+
+    if (!chat.isGroupChat) {
+      return res.status(400).json({ error: 'Only group chats can be renamed' });
+    }
+
+    //check if the user is part of the group chat
+    const isParticipant = await ChatUser.findOne({
+      where:{chatId, userId: req.user.id},
+    });
+    if (!isParticipant) {
+      return res.status(403).json({ message: 'You are not a participant in this chat' });
+    }
+
+    await chat.update({ name: name.trim() });
+
+    const updatedChat = await Chat.findByPk(chatId, {
+      include: [
+        {
+          model: User,
+          as: 'Users',
+          attributes: ['id', 'name', 'email'],
+          through: { attributes: [] }
+        },
+        {
+          model: Message,
+          as: 'latestMessage',
+          attributes: ['id', 'content', 'createdAt', 'senderId']
+        }
+      ]
+    });
+
+    res.json({ message: 'Chat renamed successfully', updatedChat });
+  } catch (error) {
+    console.error('Error renaming group chat:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   createChat,
   getChatDetails,
-  getUserChats
+  getUserChats,
+  renameGroupChat,
 };
 
 

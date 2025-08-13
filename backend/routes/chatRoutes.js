@@ -1,7 +1,7 @@
 // routes/chatRoutes.js
 const express = require('express');
 const router = express.Router();
-const {createChat, getChatDetails, getUserChats} = require('../controllers/chatController');
+const {createChat, getChatDetails, getUserChats, renameGroupChat} = require('../controllers/chatController');
 const authMiddleware = require('../utils/authMiddleware');
 // const {
 //   getChatDetails,
@@ -12,5 +12,6 @@ router.post('/create', authMiddleware, createChat);
 
 router.get('/:chatId', authMiddleware, getChatDetails);
 router.get('/user/chats', authMiddleware, getUserChats);
+router.post('/:chatId/rename', authMiddleware, renameGroupChat);
 
 module.exports = router;
