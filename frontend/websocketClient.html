@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Socket.IO Chat Test</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+  <h1>Socket.IO Chat Test</h1>
+  
+  <label>Chat ID: <input type="number" id="chatId" value="12" /></label><br>
+  <label>Message: <input type="text" id="messageInput" /></label>
+  <button id="sendBtn">Send</button>
+  
+  <ul id="messages"></ul>
+
+  <script>
+    // --- Connect to backend ---
+ const socket = io("http://localhost:3000", {
+  transports: ["websocket"],
+  auth: { token: "xyz" }
+});
+
+    const chatIdInput = document.getElementById("chatId");
+    const messageInput = document.getElementById("messageInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const messagesUl = document.getElementById("messages");
+
+    // --- On successful connection ---
+    socket.on("connect", () => {
+      console.log("✅ Connected!", socket.id);
+
+      // Join chat room automatically on connect
+      const chatId = parseInt(chatIdInput.value);
+      socket.emit("chat:join", chatId);
+      console.log(`Joined chat ${chatId}`);
+    });
+
+    // --- Receive messages ---
+    socket.on("message:receive", (msg) => {
+      console.log("📩 Message received:", msg);
+      const li = document.createElement("li");
+      li.textContent = `[${msg.User?.name || "User"}]: ${msg.content}`;
+      messagesUl.appendChild(li);
+    });
+
+    // --- Send messages ---
+    sendBtn.addEventListener("click", () => {
+      const chatId = parseInt(chatIdInput.value);
+      const content = messageInput.value.trim();
+      if (!content) return;
+    console.log("Sending message to chat", chatId, ":", content);
+        
+      socket.emit("message:send", { chatId, content });
+      messageInput.value = "";
+    });
+
+    // --- Optional: log sent confirmation ---
+    socket.on("message:sent", (msg) => {
+      console.log("✅ Message sent:", msg);
+    });
+
+    // --- Disconnect / errors ---
+    socket.on("disconnect", () => console.log("⚠️ Disconnected"));
+    socket.on("error", (err) => console.error("❌ Error:", err));
+  </script>
+</body>
+</html>

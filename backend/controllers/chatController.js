@@ -171,10 +171,157 @@ const getUserChats = async (req, res) => {
   }
 };
 
+const renameGroupChat = async (req, res) => {
+  const { chatId } = req.params;
+  const { name } = req.body;
+  console.log('Renaming group chat:', chatId, 'to name:', name);
+  if (!name || typeof name !== 'string') {
+    return res.status(400).json({ error: 'Name must be a non-empty string' });
+  }
+
+  try {
+    const chat = await Chat.findByPk(chatId);
+    if (!chat) return res.status(404).json({ message: 'Chat not found' });
+
+    if (!chat.isGroupChat) {
+      return res.status(400).json({ error: 'Only group chats can be renamed' });
+    }
+
+    //check if the user is part of the group chat
+    const isParticipant = await ChatUser.findOne({
+      where:{chatId, userId: req.user.id},
+    });
+    if (!isParticipant) {
+      return res.status(403).json({ message: 'You are not a participant in this chat' });
+    }
+
+    await chat.update({ name: name.trim() });
+
+    const updatedChat = await Chat.findByPk(chatId, {
+      include: [
+        {
+          model: User,
+          as: 'Users',
+          attributes: ['id', 'name', 'email'],
+          through: { attributes: [] }
+        },
+        {
+          model: Message,
+          as: 'latestMessage',
+          attributes: ['id', 'content', 'createdAt', 'senderId']
+        }
+      ]
+    });
+
+    res.json({ message: 'Chat renamed successfully', updatedChat });
+  } catch (error) {
+    console.error('Error renaming group chat:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const removeFromGroup = async (req,res) =>{
+  try {
+    const { userId, chatId } = req.params;
+    const requesterId = req.user.id; 
+    const chat = await Chat.findByPk(chatId);
+    if (!chat) {
+      return res.status(400).json({ message: "Invalid chatId" });
+    }
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(400).json({ message: "Invalid userId" });
+    }
+    if (!chat.isGroupChat) {
+      return res.status(400).json({ message: "Only group chats can have members removed" });
+    }
+    // Check if requester is part of the group chat
+    const requesterMembership = await ChatUser.findOne({ where: { userId: requesterId, chatId } });
+    if (!requesterMembership) { 
+      return res.status(403).json({ message: "You are not a participant in this chat" });
+    }
+    const membership = await ChatUser.findOne({ where: { userId, chatId } });
+    if (!membership) {
+      return res.status(404).json({ message: "User is not in this chat" });
+    }
+    await membership.destroy();
+    return res.status(200).json({ message: `User ${userId} removed from chat ${chatId}` });
+  } catch (error) {
+    console.error("Error removing user:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const addToGroup = async (req, res) => {
+  try {
+    const { userId, chatId } = req.params;
+    const requesterId = req.user.id; // ID of the user making the request 
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(400).json({ message: "Invalid userId" });
+    }
+    const chat = await Chat.findByPk(chatId);
+    if (!chat) {
+      return res.status(400).json({ message: "Invalid chatId" });
+    }
+    if (!chat.isGroupChat) {
+      return res.status(400).json({ message: "Only group chats can have members added" });
+    }
+    // Check if requester is part of the group chat
+    const requesterMembership = await ChatUser.findOne({ where: { userId: requesterId, chatId } });
+    if (!requesterMembership) {
+      return res.status(403).json({ message: "You are not a participant in this chat" });
+    } 
+    // Check if user is already in the chat
+    const existingMembership = await ChatUser.findOne({ where: { userId, chatId } });
+    if (existingMembership) { 
+      return res.status(400).json({ message: "User is already in this chat" });
+    } 
+    // Add user to the chat
+    await ChatUser.create({ userId, chatId });
+    return res.status(201).json({ message: `User ${userId} added to chat ${chatId}` });
+  } catch (error) {
+    console.error("Error adding user:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const leaveGroup = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const userId = req.user.id;
+    const chat = await Chat.findByPk(chatId);
+    if (!chat) {
+      return  res.status(404).json({ message: "Chat not found" });
+    }
+    if (!chat.isGroupChat) {
+      return res.status(400).json({ message: "Only group chats can be left" });
+    }
+    const membership = await ChatUser.findOne({ where: { userId, chatId } });
+    if (!membership) {
+      return res.status(404).json({ message: "You are not part of this chat" });
+    }
+    await membership.destroy();
+    // Check if any users left in chat
+    const remainingMembers = await ChatUser.count({ where: { chatId } });
+    if (remainingMembers === 0) {
+      await Chat.destroy({ where: { id: chatId } });
+      return res.status(200).json({ message: "You left the chat. Chat deleted as no members left." });
+    }
+    return res.status(200).json({ message: "You left the chat" });
+  } catch (error) {
+    console.error("Error leaving group:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
 module.exports = {
   createChat,
   getChatDetails,
-  getUserChats
+  getUserChats,
+  renameGroupChat,
+  removeFromGroup,
+  addToGroup,
+  leaveGroup
 };
 
 
