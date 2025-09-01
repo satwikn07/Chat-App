@@ -9,7 +9,7 @@ Message.belongsTo(Chat, { foreignKey: 'chatId' });
 
 // One-to-Many: User has many Messages but Message belongs to one User
 User.hasMany(Message, { foreignKey: 'senderId' });
-Message.belongsTo(User, { foreignKey: 'senderId' });
+Message.belongsTo(User, { as:"sender", foreignKey: 'senderId' });
 
 // Many-to-Many: One chat(conversation) can have many users and one user can be part of many chats(conversations)
 User.belongsToMany(Chat, { through: ChatUser, foreignKey: 'userId' });
