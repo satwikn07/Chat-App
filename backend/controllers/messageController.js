@@ -57,4 +57,38 @@ const fetchMessages = async (req, res) => {
         res.status(500).json({ message: "Failed to fetch messages" });
     }
 };
-module.exports = { fetchMessages };
+
+const deleteMessage = async (req, res) => {
+    try {
+        const { chatId, messageId } = req.params;
+        const userId = req.user.id; // from auth middleware
+        const { type } = req.query;
+
+        const message = await Message.findOne({
+            where: {
+                id: messageId,
+                chatId: chatId
+            },
+            paranoid: type === "hard" ? false : true // This includes soft-deleted rows
+        });
+        if (!message) {
+            return res.status(404).json({ message: "Message not found" });
+        }
+        if (message.senderId !== userId) {
+                return res.status(403).json({ error: "Not authorized to delete this message" });
+        }
+        // Soft delete if query param `type=soft`, else hard delete
+
+        if (type === "hard") {
+            await message.destroy({ force: true }); // Hard delete
+            return res.json({ message: "Message permanently deleted" });    
+        } else {
+            await message.destroy(); // Soft delete (sets deletedAt)
+            return res.json({ message: "Message deleted (soft)" });
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Failed to delete message" });
+        console.error("Error deleting message:", error);
+    }
+};
+module.exports = { fetchMessages, deleteMessage };

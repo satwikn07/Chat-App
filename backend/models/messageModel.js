@@ -21,7 +21,8 @@ const Message = sequelize.define('Message', {
   }
 }, {
   timestamps: true,
-  tableName: 'Messages' // Explicitly set the table name
+  tableName: 'Messages', // Explicitly set the table name
+  paranoid: true // Enable soft deletes
 });
 
 module.exports = Message;
