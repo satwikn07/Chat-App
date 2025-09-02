@@ -28,7 +28,7 @@
 
     // --- On successful connection ---
     socket.on("connect", () => {
-      console.log("✅ Connected!", socket.id);
+      console.log(" Connected!", socket.id);
 
       // Join chat room automatically on connect
       const chatId = parseInt(chatIdInput.value);
@@ -38,7 +38,7 @@
 
     // --- Receive messages ---
     socket.on("message:receive", (msg) => {
-      console.log("📩 Message received:", msg);
+      console.log("Message received:", msg);
       const li = document.createElement("li");
       li.textContent = `[${msg.User?.name || "User"}]: ${msg.content}`;
       messagesUl.appendChild(li);
@@ -57,12 +57,12 @@
 
     // --- Optional: log sent confirmation ---
     socket.on("message:sent", (msg) => {
-      console.log("✅ Message sent:", msg);
+      console.log("Message sent:", msg);
     });
 
     // --- Disconnect / errors ---
-    socket.on("disconnect", () => console.log("⚠️ Disconnected"));
-    socket.on("error", (err) => console.error("❌ Error:", err));
+    socket.on("disconnect", () => console.log("Disconnected"));
+    socket.on("error", (err) => console.error(" Error:", err));
   </script>
 </body>
 </html>
